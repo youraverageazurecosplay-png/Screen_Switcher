@@ -73,7 +73,7 @@ MAKE_SHORTCUT=${MAKE_SHORTCUT:-n}
 if [ "$MAKE_SHORTCUT" = "y" ] || [ "$MAKE_SHORTCUT" = "Y" ]; then
   DESKTOP="$HOME/Desktop"
   mkdir -p "$DESKTOP"
-  LINK_NAME="$(basename "$BASE")"
+  LINK_NAME="Bob"
   ln -sfn "$BASE" "$DESKTOP/$LINK_NAME"
   echo "Created shortcut on Desktop: $DESKTOP/$LINK_NAME"
 fi

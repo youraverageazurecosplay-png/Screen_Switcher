@@ -1,3 +1,35 @@
+#!/bin/bash
+
+# Base install folder and app subfolder
+BASE="$HOME/Screen_Switcher"
+TARGET="$BASE/app"
+
+mkdir -p "$TARGET" || exit 1
+echo "Created base folder: $BASE"
+echo "Created app folder:  $TARGET"
+cd "$TARGET" || exit 1
+
+# macOS certs helper (safe if missing)
+if [ -x "/Applications/Python 3.11/Install Certificates.command" ]; then
+  echo "Running: Install Certificates.command"
+  "/Applications/Python 3.11/Install Certificates.command" 2>/dev/null || true
+fi
+
+# Create venv inside the app folder
+echo "Creating virtual environment in: $TARGET/.venv"
+python3 -m venv .venv || exit 1
+source .venv/bin/activate
+
+# Install deps
+echo "Installing/Updating pip"
+pip install --upgrade pip
+echo "Installing pyobjc and pynput"
+pip install pyobjc pynput
+
+# Download latest Screen_Switcher.py from GitHub
+echo "Downloading Screen_Switcher.py from GitHub to: $TARGET/Screen_Switcher.py"
+curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Screen_Switcher.py" -o Screen_Switcher.py
+
 # Updater script
 echo "Creating file: $TARGET/update.sh"
 cat > update.sh << 'EOF'
@@ -14,23 +46,24 @@ EOF
 chmod +x update.sh
 echo "Made executable: $TARGET/update.sh"
 
-# Double-clickable runner
-echo "Creating file: $TARGET/Run_Screen_Switcher.command"
-cat > "Run_Screen_Switcher.command" << 'EOF'
+# Double-clickable runner in the BASE folder
+echo "Creating launcher: $BASE/Run_Screen_Switcher.command"
+cat > "$BASE/Run_Screen_Switcher.command" << 'EOF'
 #!/bin/bash
-cd "$(dirname "$0")" || exit 1
+APP_DIR="$HOME/Screen_Switcher/app"
+cd "$APP_DIR" || exit 1
 source .venv/bin/activate 2>/dev/null || true
 echo "Running: $(pwd)/Screen_Switcher.py"
 python3 Screen_Switcher.py
 EOF
-chmod +x "Run_Screen_Switcher.command"
-echo "Made executable: $TARGET/Run_Screen_Switcher.command"
+chmod +x "$BASE/Run_Screen_Switcher.command"
+echo "Made executable: $BASE/Run_Screen_Switcher.command"
 
 echo
-echo "Downloaded Screen_Switcher.py in: $TARGET"
+echo "Downloaded Screen_SwitchER.py in: $TARGET"
 echo "Created virtual env: $TARGET/.venv"
 echo "Created updater: $TARGET/update.sh"
-echo "Created launcher: $TARGET/Run_Screen_Switcher.command"
+echo "Created launcher: $BASE/Run_Screen_Switcher.command"
 echo
-echo "To run it, double-click 'Run_Screen_Switcher.command' in Finder."
-echo "To update later, run './update.sh' in Terminal from that folder."
+echo "To run it, double-click 'Run_Screen_Switcher.command' in Finder (inside the Screen_Switcher folder in your home directory)."
+echo "To update later, run './update.sh' from the 'app' folder in Terminal."

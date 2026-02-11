@@ -27,10 +27,11 @@ echo "Installing pyobjc and pynput"
 pip install pyobjc pynput
 
 # Download latest Screen_Switcher.py from GitHub
+# IMPORTANT: make sure this URL matches the Raw URL of your file on GitHub
 echo "Downloading Screen_Switcher.py from GitHub to: $TARGET/Screen_Switcher.py"
 curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Screen_Switcher.py" -o Screen_Switcher.py
 
-# Updater script
+# Updater script inside app folder
 echo "Creating file: $TARGET/update.sh"
 cat > update.sh << 'EOF'
 #!/bin/bash
@@ -46,7 +47,7 @@ EOF
 chmod +x update.sh
 echo "Made executable: $TARGET/update.sh"
 
-# Double-clickable runner in the BASE folder
+# Double-clickable launcher in BASE folder
 echo "Creating launcher: $BASE/Run_Screen_Switcher.command"
 cat > "$BASE/Run_Screen_Switcher.command" << 'EOF'
 #!/bin/bash
@@ -60,7 +61,7 @@ chmod +x "$BASE/Run_Screen_Switcher.command"
 echo "Made executable: $BASE/Run_Screen_Switcher.command"
 
 echo
-echo "Downloaded Screen_SwitchER.py in: $TARGET"
+echo "Downloaded Screen_Switcher.py in: $TARGET"
 echo "Created virtual env: $TARGET/.venv"
 echo "Created updater: $TARGET/update.sh"
 echo "Created launcher: $BASE/Run_Screen_Switcher.command"

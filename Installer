@@ -2,16 +2,12 @@
 set -euo pipefail
 
 MAIN_URL="https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/refs/heads/main/Main.py"
-DEFAULT_BASE="$HOME/Screen_Switcher"
 
-# Ask for install folder
-printf 'Install folder (default: %s): ' "$DEFAULT_BASE"
-read -r BASE_INPUT
+printf 'Install folder (default: %s): ' "$HOME/Screen_Switcher"
+read -r BASE
 
-if [ -z "$BASE_INPUT" ]; then
-  BASE="$DEFAULT_BASE"
-else
-  BASE="$BASE_INPUT"
+if [ -z "$BASE" ]; then
+  BASE="$HOME/Screen_Switcher"
 fi
 
 TARGET="$BASE/app"

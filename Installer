@@ -1,25 +1,26 @@
 #!/bin/bash
 set -euo pipefail
 
-# -------- config --------
 MAIN_URL="https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/refs/heads/main/Main.py"
-DEFAULT_BASE="~/Screen_Switcher"
-# ------------------------
+DEFAULT_BASE="$HOME/Screen_Switcher"
 
 # Ask for install folder
-read -rp "Install folder (default: $DEFAULT_BASE): " BASE_INPUT
-BASE_INPUT="${BASE_INPUT:-$DEFAULT_BASE}"
-# expand ~
-BASE_INPUT="${BASE_INPUT/#~/$HOME}"
+printf 'Install folder (default: %s): ' "$DEFAULT_BASE"
+read -r BASE_INPUT
 
-BASE="$BASE_INPUT"
+if [ -z "$BASE_INPUT" ]; then
+  BASE="$DEFAULT_BASE"
+else
+  BASE="$BASE_INPUT"
+fi
+
 TARGET="$BASE/app"
 
 echo "Installing to:"
 echo "  Base:  $BASE"
 echo "  App:   $TARGET"
-mkdir -p "$TARGET"
 
+mkdir -p "$TARGET"
 cd "$TARGET" || exit 1
 
 echo "Creating virtual environment in: $TARGET/.venv"
@@ -68,19 +69,15 @@ python Main.py
 EOF
 chmod +x Run_Screen_Switcher.command
 
-# Optional Desktop shortcut
 echo
-read -rp "Create a shortcut to this folder on your Desktop? [y/N]: " MAKE_SHORTCUT
-MAKE_SHORTCUT="${MAKE_SHORTCUT:-n}"
+printf 'Create a shortcut to this folder on your Desktop? [y/N]: '
+read -r MAKE_SHORTCUT
+MAKE_SHORTCUT=${MAKE_SHORTCUT:-n}
 
-if [[ "$MAKE_SHORTCUT" =~ ^[Yy]$ ]]; then
+if [ "$MAKE_SHORTCUT" = "y" ] || [ "$MAKE_SHORTCUT" = "Y" ]; then
   DESKTOP="$HOME/Desktop"
   mkdir -p "$DESKTOP"
-  LINK_NAME="Screen_Switcher"
-  # if user installed somewhere else, reflect that in name
-  if [ "$BASE" != "$HOME/Screen_Switcher" ]; then
-    LINK_NAME="$(basename "$BASE")"
-  fi
+  LINK_NAME="$(basename "$BASE")"
   ln -sfn "$BASE" "$DESKTOP/$LINK_NAME"
   echo "Created shortcut on Desktop: $DESKTOP/$LINK_NAME"
 fi

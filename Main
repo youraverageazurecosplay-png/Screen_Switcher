@@ -1,0 +1,360 @@
+import subprocess
+from pynput.keyboard import KeyCode, Listener
+import threading
+import tkinter as tk
+from tkinter import ttk
+import os
+
+# -----------------------------
+# Config handling
+# -----------------------------
+
+CONFIG_FILENAME = "emergency_config.txt"
+
+# Defaults
+apps_to_close = ["Roblox", "Geometry"]
+switch_to_app = "Comet"
+hotkey_close_switch = "["   # key that closes apps and switches
+hotkey_switch_only = "]"    # key that only switches
+hotkey_config_key = "'"     # key that reveals small panel when held
+show_notifications = True   # can be turned off in config
+
+
+def get_config_path():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, CONFIG_FILENAME)
+
+
+def load_config():
+    global apps_to_close, switch_to_app, hotkey_close_switch, hotkey_switch_only, hotkey_config_key
+    global show_notifications
+
+    path = get_config_path()
+    if not os.path.exists(path):
+        return
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip().lower()
+                value = value.strip()
+
+                if key == "apps_to_close":
+                    apps_to_close = [a.strip() for a in value.split(",") if a.strip()]
+                elif key == "switch_to_app":
+                    switch_to_app = value
+                elif key == "hotkey_close_switch":
+                    hotkey_close_switch = value
+                elif key == "hotkey_switch_only":
+                    hotkey_switch_only = value
+                elif key == "hotkey_config_key":
+                    hotkey_config_key = value
+                elif key == "show_notifications":
+                    show_notifications = (value.lower() == "true")
+    except Exception as e:
+        print("Failed to load config:", e)
+
+
+def save_config():
+    path = get_config_path()
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("# Emergency button config\n")
+            f.write("# apps_to_close: comma-separated app names for AppleScript\n")
+            f.write(f"apps_to_close={', '.join(apps_to_close)}\n")
+            f.write("# switch_to_app: app to activate after emergency\n")
+            f.write(f"switch_to_app={switch_to_app}\n")
+            f.write("# hotkey_close_switch: single key (e.g. [, a, 1)\n")
+            f.write(f"hotkey_close_switch={hotkey_close_switch}\n")
+            f.write("# hotkey_switch_only: single key\n")
+            f.write(f"hotkey_switch_only={hotkey_switch_only}\n")
+            f.write("# hotkey_config_key: single key used INSIDE the window to show hidden panel\n")
+            f.write(f"hotkey_config_key={hotkey_config_key}\n")
+            f.write("# show_notifications: true/false\n")
+            f.write(f"show_notifications={'true' if show_notifications else 'false'}\n")
+    except Exception as e:
+        print("Failed to save config:", e)
+
+
+# -----------------------------
+# Core emergency functions
+# -----------------------------
+
+def notify(message):
+    if not show_notifications:
+        return
+    subprocess.run([
+        'osascript', '-e',
+        f'display notification "{message}" with title "Emergency Button"'
+    ])
+
+
+def close_apps_and_switch():
+    notify("Bob Initiated: Apps closed, switching.")
+    for app in apps_to_close:
+        app = app.strip()
+        if app:
+            subprocess.run([
+                'osascript', '-e',
+                f'tell application "{app}" to quit'
+            ])
+    if switch_to_app.strip():
+        subprocess.run([
+            'osascript', '-e',
+            f'tell application "{switch_to_app.strip()}" to activate'
+        ])
+
+
+def switch_to_comet_only():
+    notify("Bob Initiated: Switching only.")
+    if switch_to_app.strip():
+        subprocess.run([
+            'osascript', '-e',
+            f'tell application "{switch_to_app.strip()}" to activate'
+        ])
+
+
+def hide_terminal_once():
+    try:
+        subprocess.run([
+            "osascript",
+            "-e",
+            '''
+tell application "System Events"
+    if exists process "Terminal" then
+        set visible of process "Terminal" to false
+    end if
+end tell
+'''
+        ])
+    except Exception:
+        pass
+
+
+# -----------------------------
+# GUI (Tkinter)
+# -----------------------------
+
+class EmergencyAppGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Bob")
+        self.root.resizable(False, False)
+
+        self.config_visible = False
+        self.panel_visible = False  # small panel when ' held
+
+        # Innocent view
+        self.innocent_frame = ttk.Frame(self.root, padding=10)
+        self.innocent_frame.grid(row=0, column=0, sticky="nsew")
+
+        self.bob_label = ttk.Label(self.innocent_frame, text="Bob", font=("Helvetica", 16))
+        self.bob_label.grid(row=0, column=0, pady=(0, 10))
+
+        self.status_label = ttk.Label(self.innocent_frame, text="Bob is running. Nothing to see here.")
+        self.status_label.grid(row=1, column=0, pady=(0, 10))
+
+        # Hidden small panel frame (Config + Hide buttons)
+        self.panel_frame = ttk.Frame(self.innocent_frame)
+        # not packed by default
+
+        self.panel_config_button = ttk.Button(self.panel_frame, text="Config", command=self.show_config_view)
+        self.panel_config_button.grid(row=0, column=0, padx=(0, 5))
+
+        self.panel_hide_button = ttk.Button(self.panel_frame, text="Hide", command=self.hide_window)
+        self.panel_hide_button.grid(row=0, column=1, padx=(5, 0))
+
+        # Full config view
+        self.config_frame = ttk.Frame(self.root, padding=10)
+
+        self.apps_label = ttk.Label(self.config_frame, text="Apps to close (comma-separated):")
+        self.apps_label.grid(row=0, column=0, sticky="w")
+
+        self.apps_entry = ttk.Entry(self.config_frame, width=35)
+        self.apps_entry.grid(row=1, column=0, pady=(0, 10), sticky="ew")
+
+        self.switch_label = ttk.Label(self.config_frame, text="Switch-to app (e.g. Comet):")
+        self.switch_label.grid(row=2, column=0, sticky="w")
+
+        self.switch_entry = ttk.Entry(self.config_frame, width=35)
+        self.switch_entry.grid(row=3, column=0, pady=(0, 10), sticky="ew")
+
+        self.hotkey_close_label = ttk.Label(self.config_frame, text="Close+switch hotkey (single key):")
+        self.hotkey_close_label.grid(row=4, column=0, sticky="w")
+
+        self.hotkey_close_entry = ttk.Entry(self.config_frame, width=10)
+        self.hotkey_close_entry.grid(row=5, column=0, sticky="w", pady=(0, 5))
+
+        self.hotkey_switch_label = ttk.Label(self.config_frame, text="Switch-only hotkey (single key):")
+        self.hotkey_switch_label.grid(row=6, column=0, sticky="w")
+
+        self.hotkey_switch_entry = ttk.Entry(self.config_frame, width=10)
+        self.hotkey_switch_entry.grid(row=7, column=0, sticky="w", pady=(0, 5))
+
+        self.hotkey_config_label = ttk.Label(self.config_frame, text="Config key (held to show panel):")
+        self.hotkey_config_label.grid(row=8, column=0, sticky="w")
+
+        self.hotkey_config_entry = ttk.Entry(self.config_frame, width=10)
+        self.hotkey_config_entry.grid(row=9, column=0, sticky="w", pady=(0, 5))
+
+        self.notify_label = ttk.Label(self.config_frame, text="Show notifications (true/false):")
+        self.notify_label.grid(row=10, column=0, sticky="w")
+
+        self.notify_entry = ttk.Entry(self.config_frame, width=10)
+        self.notify_entry.grid(row=11, column=0, sticky="w", pady=(0, 10))
+
+        self.save_button = ttk.Button(self.config_frame, text="Save", command=self.save_config_gui)
+        self.save_button.grid(row=12, column=0, sticky="e")
+
+        self.refresh_entries()
+        self.bind_config_key()
+        self.show_innocent_view()
+
+    def refresh_entries(self):
+        self.apps_entry.delete(0, tk.END)
+        self.apps_entry.insert(0, ", ".join(apps_to_close))
+
+        self.switch_entry.delete(0, tk.END)
+        self.switch_entry.insert(0, switch_to_app)
+
+        self.hotkey_close_entry.delete(0, tk.END)
+        self.hotkey_close_entry.insert(0, hotkey_close_switch)
+
+        self.hotkey_switch_entry.delete(0, tk.END)
+        self.hotkey_switch_entry.insert(0, hotkey_switch_only)
+
+        self.hotkey_config_entry.delete(0, tk.END)
+        self.hotkey_config_entry.insert(0, hotkey_config_key)
+
+        self.notify_entry.delete(0, tk.END)
+        self.notify_entry.insert(0, "true" if show_notifications else "false")
+
+    def show_innocent_view(self):
+        self.config_frame.grid_forget()
+        self.config_visible = False
+        self.innocent_frame.grid(row=0, column=0, sticky="nsew")
+        self.hide_panel()
+
+    def show_config_view(self):
+        self.innocent_frame.grid_forget()
+        self.config_frame.grid(row=0, column=0, sticky="nsew")
+        self.config_visible = True
+
+    def show_panel(self):
+        if not self.panel_visible:
+            self.panel_frame.grid(row=2, column=0, pady=(0, 5))
+            self.panel_visible = True
+
+    def hide_panel(self):
+        if self.panel_visible:
+            self.panel_frame.grid_forget()
+            self.panel_visible = False
+
+    def on_config_key_press(self, event):
+        # Only toggle panel when root window itself is focused, not when an Entry has focus
+        w = self.root.focus_get()
+        if isinstance(w, tk.Entry):
+            return
+        self.show_panel()
+
+    def on_config_key_release(self, event):
+        w = self.root.focus_get()
+        if isinstance(w, tk.Entry):
+            return
+        self.hide_panel()
+
+    def bind_config_key(self):
+        self.root.bind(f"<KeyPress-{hotkey_config_key}>", self.on_config_key_press)
+        self.root.bind(f"<KeyRelease-{hotkey_config_key}>", self.on_config_key_release)
+
+    def hide_window(self):
+        self.root.iconify()
+
+    def quit_app(self):
+        global running
+        running = False
+        self.root.quit()
+        self.root.destroy()
+
+    def save_config_gui(self):
+        global apps_to_close, switch_to_app, hotkey_close_switch, hotkey_switch_only
+        global hotkey_config_key, show_notifications
+
+        apps_text = self.apps_entry.get()
+        switch_text = self.switch_entry.get()
+        hk_close = self.hotkey_close_entry.get()
+        hk_switch = self.hotkey_switch_entry.get()
+        hk_config = self.hotkey_config_entry.get()
+        notify_text = self.notify_entry.get().strip().lower()
+
+        apps_to_close = [a.strip() for a in apps_text.split(",") if a.strip()]
+        switch_to_app = switch_text.strip() or "Comet"
+
+        hotkey_close_switch = (hk_close or "[" )[0]
+        hotkey_switch_only = (hk_switch or "]")[0]
+        hotkey_config_key = (hk_config or "'")[0]
+
+        show_notifications = (notify_text == "true")
+
+        save_config()
+        self.bind_config_key()
+        self.show_innocent_view()
+
+
+# -----------------------------
+# Keyboard listener (pynput)
+# -----------------------------
+
+running = True
+
+
+def on_press(key):
+    if not running:
+        return False
+
+    try:
+        if isinstance(key, KeyCode) and key.char is not None:
+            ch = key.char
+        else:
+            return
+    except AttributeError:
+        return
+
+    if ch == hotkey_close_switch:
+        close_apps_and_switch()
+    elif ch == hotkey_switch_only:
+        switch_to_comet_only()
+
+
+def keyboard_thread():
+    with Listener(on_press=on_press) as listener:
+        listener.join()
+
+
+# -----------------------------
+# Main
+# -----------------------------
+
+def main():
+    load_config()
+
+    notify("Bob Initiated")
+    hide_terminal_once()  # one-time hide
+
+    t_keys = threading.Thread(target=keyboard_thread, daemon=True)
+    t_keys.start()
+
+    root = tk.Tk()
+    app = EmergencyAppGUI(root)
+    root.mainloop()
+
+    global running
+    running = False
+
+
+if __name__ == "__main__":
+    main()

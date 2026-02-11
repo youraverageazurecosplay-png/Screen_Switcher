@@ -1,27 +1,67 @@
 #!/bin/bash
+set -euo pipefail
 
-set -x  # debug: print every command
+BASE="$HOME/Screen_Switcher"
+TARGET="$BASE/app"
 
-BASE_DIR="$HOME/Screen_Switcher"
-APP_DIR="$BASE_DIR/app"
-MAIN_URL="https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Screen_Switcher.py"
+mkdir -p "$TARGET"
+echo "Created base folder:  $BASE"
+echo "Created app folder:   $TARGET"
 
-echo "BASE_DIR = $BASE_DIR"
-echo "APP_DIR  = $APP_DIR"
-echo "MAIN_URL = $MAIN_URL"
+cd "$TARGET" || exit 1
 
-mkdir -p "$APP_DIR"
-cd "$APP_DIR" || exit 1
+echo "Creating virtual environment in: $TARGET/.venv"
+python3 -m venv .venv
 
-python3 -m venv .venv || exit 1
 # shellcheck source=/dev/null
-source .venv/bin/activate || exit 1
+source .venv/bin/activate
 
-pip install --upgrade pip || exit 1
-pip install pyobjc pynput || exit 1
+echo "Upgrading pip and installing dependencies..."
+pip install --upgrade pip
+pip install pyobjc pynput
 
-echo "Now downloading main script..."
-curl -v -L "$MAIN_URL" -o Screen_Switcher.py
+MAIN_URL="https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/refs/heads/main/Main.py"
 
-ls -l
-echo "Done."
+echo "Downloading Main.py from:"
+echo "  $MAIN_URL"
+curl -fsL "$MAIN_URL" -o Main.py
+
+if [ ! -s Main.py ]; then
+  echo "ERROR: Main.py is missing or empty in $TARGET"
+  echo "       Check that this URL is correct in your browser:"
+  echo "       $MAIN_URL"
+  exit 1
+fi
+
+cd "$BASE" || exit 1
+
+echo "Creating update.sh..."
+cat > update.sh << 'EOF'
+#!/bin/bash
+set -euo pipefail
+APP_DIR="$(cd "$(dirname "$0")/app" && pwd)"
+cd "$APP_DIR"
+source .venv/bin/activate
+pip install --upgrade pip pyobjc pynput
+curl -fsL "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/refs/heads/main/Main.py" -o Main.py
+echo "Screen_Switcher updated in: $APP_DIR"
+EOF
+chmod +x update.sh
+
+echo "Creating Run_Screen_Switcher.command..."
+cat > Run_Screen_Switcher.command << 'EOF'
+#!/bin/bash
+APP_DIR="$(cd "$(dirname "$0")/app" && pwd)"
+cd "$APP_DIR"
+source .venv/bin/activate
+python Main.py
+EOF
+chmod +x Run_Screen_Switcher.command
+
+echo
+echo "Downloaded Main.py in: $TARGET"
+echo "Created updater:  $BASE/update.sh"
+echo "Created launcher: $BASE/Run_Screen_Switcher.command"
+echo
+echo "To run it, double-click 'Run_Screen_Switcher.command' in Finder."
+echo "To update later, run './update.sh' in Terminal from that folder."

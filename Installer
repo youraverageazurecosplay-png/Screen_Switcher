@@ -22,8 +22,8 @@ source .venv/bin/activate
 # Install deps
 echo "Installing/Updating pip"
 pip install --upgrade pip
-echo "Installing pyobjc"
-pip install pyobjc
+echo "Installing pyobjc and pynput"
+pip install pyobjc pynput
 
 # Download latest Main from GitHub
 echo "Downloading Main from GitHub to: $TARGET/Main"
@@ -35,6 +35,9 @@ cat > update.sh << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
 source .venv/bin/activate 2>/dev/null || true
+echo "Installing/Updating dependencies (pyobjc, pynput)..."
+pip install --upgrade pip
+pip install pyobjc pynput
 echo "Downloading latest Main from GitHub..."
 curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Main" -o Main
 echo "Updated file: $(pwd)/Main"

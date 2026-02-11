@@ -1,12 +1,24 @@
 #!/bin/bash
 set -euo pipefail
 
-BASE="$HOME/Screen_Switcher"
+# -------- config --------
+MAIN_URL="https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/refs/heads/main/Main.py"
+DEFAULT_BASE="~/Screen_Switcher"
+# ------------------------
+
+# Ask for install folder
+read -rp "Install folder (default: $DEFAULT_BASE): " BASE_INPUT
+BASE_INPUT="${BASE_INPUT:-$DEFAULT_BASE}"
+# expand ~
+BASE_INPUT="${BASE_INPUT/#~/$HOME}"
+
+BASE="$BASE_INPUT"
 TARGET="$BASE/app"
 
+echo "Installing to:"
+echo "  Base:  $BASE"
+echo "  App:   $TARGET"
 mkdir -p "$TARGET"
-echo "Created base folder:  $BASE"
-echo "Created app folder:   $TARGET"
 
 cd "$TARGET" || exit 1
 
@@ -19,8 +31,6 @@ source .venv/bin/activate
 echo "Upgrading pip and installing dependencies..."
 pip install --upgrade pip
 pip install pyobjc pynput
-
-MAIN_URL="https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/refs/heads/main/Main.py"
 
 echo "Downloading Main.py from:"
 echo "  $MAIN_URL"
@@ -58,10 +68,26 @@ python Main.py
 EOF
 chmod +x Run_Screen_Switcher.command
 
+# Optional Desktop shortcut
+echo
+read -rp "Create a shortcut to this folder on your Desktop? [y/N]: " MAKE_SHORTCUT
+MAKE_SHORTCUT="${MAKE_SHORTCUT:-n}"
+
+if [[ "$MAKE_SHORTCUT" =~ ^[Yy]$ ]]; then
+  DESKTOP="$HOME/Desktop"
+  mkdir -p "$DESKTOP"
+  LINK_NAME="Screen_Switcher"
+  # if user installed somewhere else, reflect that in name
+  if [ "$BASE" != "$HOME/Screen_Switcher" ]; then
+    LINK_NAME="$(basename "$BASE")"
+  fi
+  ln -sfn "$BASE" "$DESKTOP/$LINK_NAME"
+  echo "Created shortcut on Desktop: $DESKTOP/$LINK_NAME"
+fi
+
 echo
 echo "Downloaded Main.py in: $TARGET"
 echo "Created updater:  $BASE/update.sh"
 echo "Created launcher: $BASE/Run_Screen_Switcher.command"
 echo
 echo "To run it, double-click 'Run_Screen_Switcher.command' in Finder."
-echo "To update later, run './update.sh' in Terminal from that folder."

@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# Ask where to install
-read -p "Install folder (default: ~/Screen_Switcher): " -r TARGET
-TARGET="${TARGET:-$HOME/Screen_Switcher}"
+# Fixed install folder
+TARGET="$HOME/Screen_Switcher"
 
 mkdir -p "$TARGET" || exit 1
 echo "Created folder: $TARGET"
@@ -25,9 +24,9 @@ pip install --upgrade pip
 echo "Installing pyobjc and pynput"
 pip install pyobjc pynput
 
-# Download latest Main.py from GitHub
-echo "Downloading Main.py from GitHub to: $TARGET/Main.py"
-curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Main.py" -o Main.py
+# Download latest Screen_Switcher.py from GitHub
+echo "Downloading Screen_Switcher.py from GitHub to: $TARGET/Screen_Switcher.py"
+curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Screen_Switcher.py" -o Screen_Switcher.py
 
 # Updater script
 echo "Creating file: $TARGET/update.sh"
@@ -38,9 +37,9 @@ source .venv/bin/activate 2>/dev/null || true
 echo "Installing/Updating dependencies (pyobjc, pynput)..."
 pip install --upgrade pip
 pip install pyobjc pynput
-echo "Downloading latest Main.py from GitHub..."
-curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Main.py" -o Main.py
-echo "Updated file: $(pwd)/Main.py"
+echo "Downloading latest Screen_Switcher.py from GitHub..."
+curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Screen_Switcher.py" -o Screen_Switcher.py
+echo "Updated file: $(pwd)/Screen_Switcher.py"
 EOF
 chmod +x update.sh
 echo "Made executable: $TARGET/update.sh"
@@ -51,17 +50,16 @@ cat > "Run_Screen_Switcher.command" << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
 source .venv/bin/activate 2>/dev/null || true
-echo "Running: $(pwd)/Main.py"
-python3 Main.py
+echo "Running: $(pwd)/Screen_Switcher.py"
+python3 Screen_Switcher.py
 EOF
 chmod +x "Run_Screen_Switcher.command"
 echo "Made executable: $TARGET/Run_Screen_Switcher.command"
 
 echo
-echo "Downloaded Main.py in: $TARGET"
+echo "Downloaded Screen_Switcher.py in: $TARGET"
 echo "Created virtual env: $TARGET/.venv"
 echo "Created updater: $TARGET/update.sh"
 echo "Created launcher: $TARGET/Run_Screen_Switcher.command"
 echo
-echo "To run it, double-click 'Run_Screen_Switcher.command' in Finder."
-echo "To update later, run './update.sh' in Terminal from that folder."
+echo "To run it, double-click 'Run_S

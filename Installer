@@ -17,7 +17,6 @@ fi
 # Create venv
 echo "Creating virtual environment in: $TARGET/.venv"
 python3 -m venv .venv || exit 1
-# shellcheck disable=SC1091
 source .venv/bin/activate
 
 # Install deps
@@ -35,7 +34,6 @@ echo "Creating file: $TARGET/update.sh"
 cat > update.sh << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
-# shellcheck disable=SC1091
 source .venv/bin/activate 2>/dev/null || true
 echo "Downloading latest Main from GitHub..."
 curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Main" -o Main
@@ -49,7 +47,6 @@ echo "Creating file: $TARGET/Run_Screen_Switcher.command"
 cat > "Run_Screen_Switcher.command" << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
-# shellcheck disable=SC1091
 source .venv/bin/activate 2>/dev/null || true
 echo "Running: $(pwd)/Main"
 python3 Main

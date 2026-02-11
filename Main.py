@@ -7,11 +7,13 @@ import os
 import hashlib
 import sys
 
+
 # -----------------------------
 # License system (per-device key + hidden role)
 # -----------------------------
 
-SECRET_SALT = "20131028"  # must match key_manager.py
+
+SECRET_SALT = "20131028"  # must match your key scheme
 
 ROLE_BASIC = 1
 ROLE_ADMIN = 2
@@ -19,6 +21,7 @@ ROLE_ADMIN = 2
 LICENSE_FILE = "bob_license.dat"  # stores last key + role
 
 current_role = ROLE_BASIC  # default
+
 
 def get_device_id():
     try:
@@ -34,22 +37,27 @@ def get_device_id():
         pass
     return "unknown-device"
 
+
 def generate_raw_bytes(device_id: str, role_code: int) -> bytes:
     data = (device_id + str(role_code) + SECRET_SALT).encode("utf-8")
     return hashlib.sha256(data).digest()
+
 
 def embed_role_in_hash(digest: bytes, role_code: int) -> bytes:
     first = digest[0]
     first = (first & 0xF0) | (role_code & 0x0F)
     return bytes([first]) + digest[1:]
 
+
 def expected_key_for_device(device_id: str, role_code: int) -> str:
     d = generate_raw_bytes(device_id, role_code)
     d2 = embed_role_in_hash(d, role_code)
     return d2.hex()[:8].upper()
 
+
 def role_name(role_code: int) -> str:
     return "Basic" if role_code == ROLE_BASIC else "Admin"
+
 
 def save_license(key: str, role_code: int):
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), LICENSE_FILE)
@@ -58,6 +66,7 @@ def save_license(key: str, role_code: int):
             f.write(f"{key}\n{role_code}\n")
     except Exception:
         pass
+
 
 def load_license():
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), LICENSE_FILE)
@@ -74,6 +83,7 @@ def load_license():
     except Exception:
         return None, None
 
+
 def clear_license_file():
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), LICENSE_FILE)
     try:
@@ -81,6 +91,7 @@ def clear_license_file():
             os.remove(path)
     except Exception:
         pass
+
 
 def validate_key_for_device(device_id: str, key: str):
     key = key.strip().upper()
@@ -93,9 +104,11 @@ def validate_key_for_device(device_id: str, key: str):
             return role_code
     return None
 
+
 # -----------------------------
 # Config handling
 # -----------------------------
+
 
 CONFIG_FILENAME = "emergency_config.txt"
 
@@ -106,9 +119,11 @@ hotkey_switch_only = "]"
 hotkey_config_key = "'"
 show_notifications = True
 
+
 def get_config_path():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_dir, CONFIG_FILENAME)
+
 
 def load_config():
     global apps_to_close, switch_to_app, hotkey_close_switch, hotkey_switch_only, hotkey_config_key
@@ -143,6 +158,7 @@ def load_config():
     except Exception as e:
         print("Failed to load config:", e)
 
+
 def save_config():
     path = get_config_path()
     try:
@@ -157,17 +173,20 @@ def save_config():
     except Exception as e:
         print("Failed to save config:", e)
 
+
 # -----------------------------
 # Core emergency functions
 # -----------------------------
+
 
 def notify(message):
     if not show_notifications:
         return
     subprocess.run([
-        'osascript', '-e',
+        "osascript", "-e",
         f'display notification "{message}" with title "Emergency Button"'
     ])
+
 
 def close_apps_and_switch():
     notify("Bob Initiated: Apps closed, switching.")
@@ -175,22 +194,24 @@ def close_apps_and_switch():
         app = app.strip()
         if app:
             subprocess.run([
-                'osascript', '-e',
+                "osascript", "-e",
                 f'tell application "{app}" to quit'
             ])
     if switch_to_app.strip():
         subprocess.run([
-            'osascript', '-e',
+            "osascript", "-e",
             f'tell application "{switch_to_app.strip()}" to activate'
         ])
+
 
 def switch_to_comet_only():
     notify("Bob Initiated: Switching only.")
     if switch_to_app.strip():
         subprocess.run([
-            'osascript', '-e',
+            "osascript", "-e",
             f'tell application "{switch_to_app.strip()}" to activate'
         ])
+
 
 def hide_terminal_once():
     try:
@@ -208,9 +229,11 @@ end tell
     except Exception:
         pass
 
+
 # -----------------------------
-# GUI (Tkinter)
+# Dev Panel (includes built-in key generator)
 # -----------------------------
+
 
 class DevPanel:
     def __init__(self, parent, device_id):
@@ -226,10 +249,8 @@ class DevPanel:
         ttk.Label(frame, text=f"Device: {device_id}", foreground="blue").grid(row=0, column=0, sticky="w")
         ttk.Label(frame, text=f"Current role: {role_name(current_role)}").grid(row=1, column=0, sticky="w", pady=(0, 10))
 
-        # Clear perms
         ttk.Button(frame, text="Clear permissions (log out)", command=self.clear_perms).grid(row=2, column=0, sticky="w", pady=(0, 10))
 
-        # Built-in key generator
         sep = ttk.Separator(frame, orient="horizontal")
         sep.grid(row=3, column=0, sticky="ew", pady=(0, 10))
 
@@ -277,6 +298,12 @@ class DevPanel:
         self.top.update()
         messagebox.showinfo("Copied", "Key copied to clipboard.")
 
+
+# -----------------------------
+# GUI (Tkinter)
+# -----------------------------
+
+
 class EmergencyAppGUI:
     def __init__(self, root, device_id):
         self.root = root
@@ -285,9 +312,8 @@ class EmergencyAppGUI:
         self.root.resizable(False, False)
 
         self.config_visible = False
-        self.panel_visible = False  # small panel when ' held
+        self.panel_visible = False
 
-        # Innocent view
         self.innocent_frame = ttk.Frame(self.root, padding=10)
         self.innocent_frame.grid(row=0, column=0, sticky="nsew")
 
@@ -297,14 +323,12 @@ class EmergencyAppGUI:
         self.status_label = ttk.Label(self.innocent_frame, text="Bob is running. Nothing to see here.")
         self.status_label.grid(row=1, column=0, pady=(0, 10))
 
-        # Hidden small panel frame (Config + Hide buttons)
         self.panel_frame = ttk.Frame(self.innocent_frame)
         self.panel_config_button = ttk.Button(self.panel_frame, text="Config", command=self.show_config_view)
         self.panel_config_button.grid(row=0, column=0, padx=(0, 5))
         self.panel_hide_button = ttk.Button(self.panel_frame, text="Hide", command=self.hide_window)
         self.panel_hide_button.grid(row=0, column=1, padx=(5, 0))
 
-        # Full config view
         self.config_frame = ttk.Frame(self.root, padding=10)
 
         self.apps_label = ttk.Label(self.config_frame, text="Apps to close (comma-separated):")
@@ -343,7 +367,6 @@ class EmergencyAppGUI:
         self.notify_entry = ttk.Entry(self.config_frame, width=10)
         self.notify_entry.grid(row=11, column=0, sticky="w", pady=(0, 10))
 
-        # Row 12: role‑dependent buttons
         self.dev_button = ttk.Button(self.config_frame, text="Dev Panel", command=self.open_dev_panel)
         self.logout_button = ttk.Button(self.config_frame, text="Log out", command=self.log_out)
 
@@ -373,11 +396,9 @@ class EmergencyAppGUI:
         self.notify_entry.delete(0, tk.END)
         self.notify_entry.insert(0, "true" if show_notifications else "false")
 
-        # Clear row 12
         for w in self.config_frame.grid_slaves(row=12):
             w.grid_forget()
 
-        # Admin sees Dev Panel; everyone sees Log out
         if current_role == ROLE_ADMIN:
             self.dev_button.grid(row=12, column=0, sticky="w", pady=(0, 5))
         self.logout_button.grid(row=12, column=0, sticky="e", pady=(0, 5))
@@ -446,7 +467,7 @@ class EmergencyAppGUI:
         apps_to_close = [a.strip() for a in apps_text.split(",") if a.strip()]
         switch_to_app = switch_text.strip() or "Comet"
 
-        hotkey_close_switch = (hk_close or "[" )[0]
+        hotkey_close_switch = (hk_close or "[")[0]
         hotkey_switch_only = (hk_switch or "]")[0]
         hotkey_config_key = (hk_config or "'")[0]
 
@@ -456,14 +477,13 @@ class EmergencyAppGUI:
         self.bind_config_key()
         self.show_innocent_view()
 
-class LicenseAndMainApp:
-    """
-    Single root:
-    - If saved license is valid for this device, skip input.
-    - Otherwise, show license UI.
-    Sets current_role based on key.
-    """
 
+# -----------------------------
+# License wrapper for GUI
+# -----------------------------
+
+
+class LicenseAndMainApp:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Bob License")
@@ -472,7 +492,6 @@ class LicenseAndMainApp:
         self.licensed = False
         self.device_id = get_device_id()
 
-        # Try auto-license from file
         self.try_auto_license()
         if not self.licensed:
             self.build_license_ui()
@@ -550,11 +569,14 @@ class LicenseAndMainApp:
         self.root.mainloop()
         return self.licensed
 
+
 # -----------------------------
 # Keyboard listener (pynput)
 # -----------------------------
 
+
 running = True
+
 
 def on_press(key):
     if not running:
@@ -573,13 +595,16 @@ def on_press(key):
     elif ch == hotkey_switch_only:
         switch_to_comet_only()
 
+
 def keyboard_thread():
     with Listener(on_press=on_press) as listener:
         listener.join()
 
+
 # -----------------------------
 # Main
 # -----------------------------
+
 
 def main():
     load_config()
@@ -597,6 +622,7 @@ def main():
 
     global running
     running = False
+
 
 if __name__ == "__main__":
     main()

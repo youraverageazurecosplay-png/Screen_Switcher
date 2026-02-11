@@ -5,44 +5,63 @@ read -p "Install folder (default: ~/Screen_Switcher): " -r TARGET
 TARGET="${TARGET:-$HOME/Screen_Switcher}"
 
 mkdir -p "$TARGET" || exit 1
+echo "Created folder: $TARGET"
 cd "$TARGET" || exit 1
 
 # macOS certs helper (safe if missing)
 if [ -x "/Applications/Python 3.11/Install Certificates.command" ]; then
+  echo "Running: Install Certificates.command"
   "/Applications/Python 3.11/Install Certificates.command" 2>/dev/null || true
 fi
 
 # Create venv
+echo "Creating virtual environment in: $TARGET/.venv"
 python3 -m venv .venv || exit 1
+# shellcheck disable=SC1091
 source .venv/bin/activate
 
 # Install deps
+echo "Installing/Updating pip"
 pip install --upgrade pip
+echo "Installing pyobjc"
 pip install pyobjc
 
 # Download latest Main from GitHub
+echo "Downloading Main from GitHub to: $TARGET/Main"
 curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Main" -o Main
 
 # Updater script
+echo "Creating file: $TARGET/update.sh"
 cat > update.sh << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
+# shellcheck disable=SC1091
 source .venv/bin/activate 2>/dev/null || true
+echo "Downloading latest Main from GitHub..."
 curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Main" -o Main
-echo "Screen Switcher updated."
+echo "Updated file: $(pwd)/Main"
 EOF
 chmod +x update.sh
+echo "Made executable: $TARGET/update.sh"
 
-# Double-clickable runner for your friends
+# Double-clickable runner
+echo "Creating file: $TARGET/Run_Screen_Switcher.command"
 cat > "Run_Screen_Switcher.command" << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
+# shellcheck disable=SC1091
 source .venv/bin/activate 2>/dev/null || true
+echo "Running: $(pwd)/Main"
 python3 Main
 EOF
 chmod +x "Run_Screen_Switcher.command"
+echo "Made executable: $TARGET/Run_Screen_Switcher.command"
 
 echo
-echo "Installed in: $TARGET"
+echo "Downloaded Main in: $TARGET"
+echo "Created virtual env: $TARGET/.venv"
+echo "Created updater: $TARGET/update.sh"
+echo "Created launcher: $TARGET/Run_Screen_Switcher.command"
+echo
 echo "To run it, double-click 'Run_Screen_Switcher.command' in Finder."
-echo "To update later, run ./update.sh in Terminal from that folder."
+echo "To update later, run './update.sh' in Terminal from that folder."

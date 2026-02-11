@@ -14,7 +14,6 @@ fi
 
 # Create venv
 python3 -m venv .venv || exit 1
-# shellcheck disable=SC1091
 source .venv/bin/activate
 
 # Install deps
@@ -28,7 +27,6 @@ curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Sw
 cat > update.sh << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
-# shellcheck disable=SC1091
 source .venv/bin/activate 2>/dev/null || true
 curl -L "https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/main/Main" -o Main
 echo "Screen Switcher updated."
@@ -39,7 +37,6 @@ chmod +x update.sh
 cat > "Run_Screen_Switcher.command" << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")" || exit 1
-# shellcheck disable=SC1091
 source .venv/bin/activate 2>/dev/null || true
 python3 Main
 EOF

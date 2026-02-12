@@ -4,6 +4,19 @@ set -euo pipefail
 MAIN_URL="https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/refs/heads/main/Main.py"
 DEFAULT_BASE="$HOME/Screen_Switcher"
 
+# Choose Python: prefer system /usr/bin/python3 (usually has Tk),
+# fall back to python3 in PATH if needed.
+if [ -x /usr/bin/python3 ]; then
+  PY_BIN="/usr/bin/python3"
+elif command -v python3 >/dev/null 2>&1; then
+  PY_BIN="$(command -v python3)"
+else
+  echo "ERROR: No python3 found. Install Python 3 and try again."
+  exit 1
+fi
+
+echo "Using Python interpreter: $PY_BIN"
+
 printf 'Install folder (default: %s): ' "$DEFAULT_BASE"
 read -r BASE
 
@@ -21,7 +34,7 @@ mkdir -p "$TARGET"
 cd "$TARGET" || exit 1
 
 echo "Creating virtual environment in: $TARGET/.venv"
-python3 -m venv .venv
+"$PY_BIN" -m venv .venv
 
 # shellcheck source=/dev/null
 source .venv/bin/activate
@@ -60,7 +73,8 @@ echo "Creating Run_Screen_Switcher.command..."
 cat > Run_Screen_Switcher.command << 'EOF'
 #!/bin/bash
 APP_DIR="$(cd "$(dirname "$0")/app" && pwd)"
-cd "$APP_DIR"
+cd "$APP_DIR" || exit 1
+# shellcheck source=/dev/null
 source .venv/bin/activate
 python Main.py
 EOF
@@ -82,7 +96,7 @@ fi
 echo
 printf 'Run Bob now to trigger macOS permission prompts? [y/N]: '
 read -r RUN_NOW
-RUN_NOW=${RUN_NOW:-n}
+RUN_NOW=${MAKE_SHORTCUT:-n}
 
 if [ "$RUN_NOW" = "y" ] || [ "$RUN_NOW" = "Y" ]; then
   echo
@@ -90,7 +104,6 @@ if [ "$RUN_NOW" = "y" ] || [ "$RUN_NOW" = "Y" ]; then
   echo "click Allow so the hotkeys and app switching can work."
   echo
 
-  # Run from the app directory using the same venv
   APP_DIR="$TARGET"
   cd "$APP_DIR" || exit 1
   # shellcheck source=/dev/null
@@ -100,7 +113,7 @@ fi
 
 echo
 echo "Downloaded Main.py in: $TARGET"
-echo "Created updater:  $BASE/update.sh"
+echo "Created updater: $BASE/update.sh"
 echo "Created launcher: $BASE/Run_Screen_Switcher.command"
 echo
 echo "To run it later, double-click 'Run_Screen_Switcher.command' in Finder."

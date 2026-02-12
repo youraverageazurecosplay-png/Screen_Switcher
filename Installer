@@ -2,12 +2,13 @@
 set -euo pipefail
 
 MAIN_URL="https://raw.githubusercontent.com/youraverageazurecosplay-png/Screen_Switcher/refs/heads/main/Main.py"
+DEFAULT_BASE="$HOME/Screen_Switcher"
 
-printf 'Install folder (default: %s): ' "$HOME/Screen_Switcher"
+printf 'Install folder (default: %s): ' "$DEFAULT_BASE"
 read -r BASE
 
 if [ -z "$BASE" ]; then
-  BASE="$HOME/Screen_Switcher"
+  BASE="$DEFAULT_BASE"
 fi
 
 TARGET="$BASE/app"
@@ -73,9 +74,28 @@ MAKE_SHORTCUT=${MAKE_SHORTCUT:-n}
 if [ "$MAKE_SHORTCUT" = "y" ] || [ "$MAKE_SHORTCUT" = "Y" ]; then
   DESKTOP="$HOME/Desktop"
   mkdir -p "$DESKTOP"
-  LINK_NAME="Bob"
+  LINK_NAME="Screen Switcher"
   ln -sfn "$BASE" "$DESKTOP/$LINK_NAME"
   echo "Created shortcut on Desktop: $DESKTOP/$LINK_NAME"
+fi
+
+echo
+printf 'Run Bob now to trigger macOS permission prompts? [y/N]: '
+read -r RUN_NOW
+RUN_NOW=${RUN_NOW:-n}
+
+if [ "$RUN_NOW" = "y" ] || [ "$RUN_NOW" = "Y" ]; then
+  echo
+  echo "Launching Bob once. If macOS asks for Accessibility/Input Monitoring or to control other apps,"
+  echo "click Allow so the hotkeys and app switching can work."
+  echo
+
+  # Run from the app directory using the same venv
+  APP_DIR="$TARGET"
+  cd "$APP_DIR" || exit 1
+  # shellcheck source=/dev/null
+  source .venv/bin/activate
+  python Main.py
 fi
 
 echo
@@ -83,4 +103,4 @@ echo "Downloaded Main.py in: $TARGET"
 echo "Created updater:  $BASE/update.sh"
 echo "Created launcher: $BASE/Run_Screen_Switcher.command"
 echo
-echo "To run it, double-click 'Run_Screen_Switcher.command' in Finder."
+echo "To run it later, double-click 'Run_Screen_Switcher.command' in Finder."
